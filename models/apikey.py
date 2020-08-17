@@ -32,8 +32,3 @@ class apikey(BaseModel):
             return values
 
         raise ValueError('API key is not Valid')
-
-
-apikey = apikey(APIKEY="meEujVdn64YtSSxFKryiRADLZ2fMi6NU")
-
-print(apikey.ID)
