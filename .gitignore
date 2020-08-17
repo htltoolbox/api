@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-=======
 /env.py
 .idea/
 
->>>>>>> 0b30456... :tada: initial commit
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
