@@ -1,10 +1,10 @@
 from typing import Optional
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, root_validator
 from assets.database import openDBConnection
 
 
 class apikey(BaseModel):
-    ID: Optional[int] = Field(None, description="")
+    ID: Optional[int]
     NAME: Optional[str]
     APIKEY: str
     PERMISSION: Optional[int]
