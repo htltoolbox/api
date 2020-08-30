@@ -20,8 +20,3 @@ class SessionKey(BaseModel):
             return values
 
         raise ValidationError('SessionKey is not valid')
-
-
-rakic = SessionKey(key="d2587b14f80e1f07c1335184e89e7a6c2e6200626ae05d6b99c4d2354d789edd")
-
-print(rakic.valid)
