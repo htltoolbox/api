@@ -3,7 +3,7 @@ from pydantic import BaseModel, root_validator
 from assets.database import openDBConnection
 
 
-class apikey(BaseModel):
+class ApiKey(BaseModel):
     ID: Optional[int]
     NAME: Optional[str]
     APIKEY: str

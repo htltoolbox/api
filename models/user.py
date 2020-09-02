@@ -1,0 +1,40 @@
+from typing import Optional
+from pydantic import BaseModel, validator, ValidationError, IPvAnyAddress
+from assets.database import openDBConnection
+import re
+from models.sessionkey import SessionKey
+
+
+class User(BaseModel):
+    ID: int
+    EMAIL: Optional[str] = None
+    PASSWORD_HASH: Optional[str] = None
+    NAME: Optional[str] = None
+    LASTNAME: Optional[str] = None
+    CLASS: Optional[str] = None
+    PERMISSION_LEVEL: Optional[int] = None
+    LAST_IP: Optional[IPvAnyAddress] = None
+    ACTIVE: Optional[bool] = None
+    SESSION_KEY: Optional[SessionKey] = None
+
+    @validator('ID')
+    def is_positiv(cls, values):
+        if values > 0:
+            return values
+        raise ValueError('ID <= 0 is not possible')
+
+    @validator('EMAIL')
+    def is_valid_email(cls, values):
+        regex = r"^([A-z]+\.[A-z]+(\d\d)?@htl-salzburg.ac.at)$"
+        if re.search(regex, values):
+            return values
+        else:
+            raise ValueError('EMAIL not Valid')
+
+    @validator('CLASS')
+    def is_valid_class(cls, values):
+        regex = r"^([1-8][A-I]([A-Z]{2,4})|(LEHRER))$"
+        if re.search(regex, values):
+            return values
+        else:
+            raise ValueError('CLASS in not Valid')

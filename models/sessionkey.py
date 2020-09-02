@@ -19,4 +19,4 @@ class SessionKey(BaseModel):
             values['valid'] = True
             return values
 
-        raise ValidationError('SessionKey is not valid')
+        raise ValueError('SessionKey is not valid')
