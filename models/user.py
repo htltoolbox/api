@@ -1,3 +1,4 @@
+from ipaddress import IPv4Address
 from typing import Optional
 from pydantic import BaseModel, validator, ValidationError, IPvAnyAddress
 from assets.database import openDBConnection
@@ -6,16 +7,15 @@ from models.sessionkey import SessionKey
 
 
 class User(BaseModel):
-    ID: int
+    ID: Optional[int] = None
     EMAIL: Optional[str] = None
     PASSWORD_HASH: Optional[str] = None
     NAME: Optional[str] = None
     LASTNAME: Optional[str] = None
     CLASS: Optional[str] = None
     PERMISSION_LEVEL: Optional[int] = None
-    LAST_IP: Optional[IPvAnyAddress] = None
+    LAST_IP: Optional[IPv4Address] = None
     ACTIVE: Optional[bool] = None
-    SESSION_KEY: Optional[SessionKey] = None
 
     @validator('ID')
     def is_positiv(cls, values):
