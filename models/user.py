@@ -6,6 +6,12 @@ import re
 from models.sessionkey import SessionKey
 
 
+class preUser(BaseModel):
+    EMAIL: Optional[str] = None
+    PASSWORD: Optional[str] = None
+    CLASS: Optional[str] = None
+
+
 class User(BaseModel):
     ID: Optional[int] = None
     EMAIL: Optional[str] = None
@@ -14,14 +20,14 @@ class User(BaseModel):
     LASTNAME: Optional[str] = None
     CLASS: Optional[str] = None
     PERMISSION_LEVEL: Optional[int] = None
-    LAST_IP: Optional[IPv4Address] = None
+    LAST_IP: Optional[str] = None
     ACTIVE: Optional[bool] = None
 
     @validator('ID')
     def is_positiv(cls, values):
         if values > 0:
             return values
-        raise ValueError('ID <= 0 is not possible')
+        raise ValidationError('ID <= 0 is not possible')
 
     @validator('EMAIL')
     def is_valid_email(cls, values):
@@ -29,7 +35,7 @@ class User(BaseModel):
         if re.search(regex, values):
             return values
         else:
-            raise ValueError('EMAIL not Valid')
+            raise ValidationError('EMAIL not Valid')
 
     @validator('CLASS')
     def is_valid_class(cls, values):
@@ -37,4 +43,4 @@ class User(BaseModel):
         if re.search(regex, values):
             return values
         else:
-            raise ValueError('CLASS in not Valid')
+            raise ValidationError('CLASS in not Valid')
