@@ -98,10 +98,10 @@ def is_teacher(EMAIL: str):
 
     cursor.execute("SELECT EMAIL FROM GLOBAL_TEACHERS WHERE EMAIL = %s", (EMAIL,))
 
-    data: str = cursor.fetchmany(1)
+    data: str = cursor.fetchone()
 
     if data is not None:
-        if data[0].lower() == EMAIL.lower():
+        if data[0].casefold() == EMAIL.casefold():
             return True
         return False
     return False
