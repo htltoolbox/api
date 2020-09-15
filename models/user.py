@@ -1,6 +1,6 @@
 from ipaddress import IPv4Address
 from typing import Optional
-from pydantic import BaseModel, validator, ValidationError, IPvAnyAddress
+from pydantic import BaseModel, validator, IPvAnyAddress
 from assets.database import openDBConnection
 import re
 from models.sessionkey import SessionKey
@@ -27,7 +27,7 @@ class User(BaseModel):
     def is_positiv(cls, values):
         if values > 0:
             return values
-        raise ValidationError('ID <= 0 is not possible')
+        raise ValueError('ID <= 0 is not possible')
 
     @validator('EMAIL')
     def is_valid_email(cls, values):
@@ -35,7 +35,7 @@ class User(BaseModel):
         if re.search(regex, values):
             return values
         else:
-            raise ValidationError('EMAIL not Valid')
+            raise ValueError('EMAIL not Valid')
 
     @validator('CLASS')
     def is_valid_class(cls, values):
@@ -43,4 +43,4 @@ class User(BaseModel):
         if re.search(regex, values):
             return values
         else:
-            raise ValidationError('CLASS in not Valid')
+            raise ValueError('CLASS in not Valid')
