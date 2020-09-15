@@ -91,13 +91,13 @@ async def form_create_user(api_key: str, user: preUser):
         )
 
     PERMISSION_LEVEL = 0
-    if is_teacher(preUser.EMAIL):
+    if is_teacher(user.EMAIL):
         PERMISSION_LEVEL = 1
 
     NAME = user.EMAIL.split(".")[0].capitalize()
     LASTNAME = user.EMAIL.split(".")[1].split("@")[0].capitalize()
 
-    if LASTNAME[:-2].isdigit():
+    if LASTNAME[-2:].isdigit():
         LASTNAME = LASTNAME[:-2]
 
     try:
