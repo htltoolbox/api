@@ -38,6 +38,34 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+# Mail API POST
+
+@app.post("/sendmail")
+async def api_send_mail(apikey: ApiKey, mail: Mail):
+    try:
+        if apikey.PERMISSION >= 2:
+            if mail.send():
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content="E-Mail was sent successfully"
+                )
+            else:
+                return HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal Server Error with Processing the Mail"
+                )
+        else:
+            return HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not allowed to send Mails"
+            )
+    except ValidationError as e:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content=e.errors()
+        )
+
+
 # User get Operrations
 
 
@@ -137,32 +165,3 @@ async def form_create_user(api_key: str, user: preUser):
         status_code=status.HTTP_200_OK,
         content="User successfully created"
     )
-
-
-# Mail API
-
-@app.post("/sendmail")
-async def api_send_mail(apikey: ApiKey, mail: Mail):
-    try:
-        if apikey.PERMISSION >= 2:
-            if mail.send():
-                return JSONResponse(
-                    status_code=status.HTTP_200_OK,
-                    content="E-Mail was sent successfully"
-                )
-            else:
-                return HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Internal Server Error with Processing the Mail"
-                )
-        else:
-            return HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not allowed to send Mails"
-            )
-    except ValidationError as e:
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content=e.errors()
-        )
-
