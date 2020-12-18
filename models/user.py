@@ -1,9 +1,15 @@
 from ipaddress import IPv4Address
 from typing import Optional
-from pydantic import BaseModel, validator, ValidationError, IPvAnyAddress
+from pydantic import BaseModel, validator, IPvAnyAddress
 from assets.database import openDBConnection
 import re
 from models.sessionkey import SessionKey
+
+
+class preUser(BaseModel):
+    EMAIL: Optional[str] = None
+    PASSWORD: Optional[str] = None
+    CLASS: Optional[str] = None
 
 
 class User(BaseModel):
@@ -14,7 +20,7 @@ class User(BaseModel):
     LASTNAME: Optional[str] = None
     CLASS: Optional[str] = None
     PERMISSION_LEVEL: Optional[int] = None
-    LAST_IP: Optional[IPv4Address] = None
+    LAST_IP: Optional[str] = None
     ACTIVE: Optional[bool] = None
 
     @validator('ID')

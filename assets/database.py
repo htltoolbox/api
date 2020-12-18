@@ -7,9 +7,9 @@ import env as e
 
 def openDBConnection():
     db = mysql.connector.connect(
-        host=e.host,
-        user=e.username,
-        passwd=e.password,
-        database=e.database
+        host=e.db_host,
+        user=e.db_username,
+        passwd=e.db_password,
+        database=e.db_database
     )
     return db
