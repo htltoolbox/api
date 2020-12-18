@@ -7,12 +7,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
 
+from assets.database import openDBConnection
 from functions.hashing import get_current_active_user, authenticate_user, get_password_hash
 from functions.sessionkey import create_access_token
 from functions.user import create_user, get_user, is_teacher, get_all_users, remove_passwordhash_obj
 from models.token import Token
 from models.user import User, preUser
 from models.apikey import ApiKey
+from models.mail import Mail
 
 app = FastAPI()
 
@@ -50,7 +52,7 @@ async def read_user_by_id(id: int, current_user: User = Depends(get_current_acti
         return get_user(ID=id)
     else:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
-                            content="Not sufficent Permissions to view other users")
+                            content="Not sufficient Permissions to view other users")
 
 
 @app.get("/users", description="returns all users (for admin dashboard)")
@@ -62,7 +64,7 @@ async def return_all_users(current_user: User = Depends(get_current_active_user)
             return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=e.errors())
     else:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
-                            content="Not sufficent Permissions to view other users")
+                            content="Not sufficient Permissions to view other users")
 
 
 # Put
@@ -76,7 +78,7 @@ async def admin_create_user(user: User, current_user: User = Depends(get_current
     else:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
-            content="Not sufficent Permissions to create other users"
+            content="Not sufficient Permissions to create other users"
         )
 
 
@@ -88,6 +90,21 @@ async def form_create_user(api_key: str, user: preUser):
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content=e.errors()
+        )
+
+    db = openDBConnection()
+    cursor = db.cursor()
+
+    SQL = "SELECT EMAIL FROM USERDATA WHERE EMAIL = %s"
+    PAR = (user.EMAIL,)
+
+    cursor.execute(SQL, PAR)
+    data = cursor.fetchone()
+
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is already registered"
         )
 
     PERMISSION_LEVEL = 0
@@ -118,5 +135,34 @@ async def form_create_user(api_key: str, user: preUser):
     create_user(account)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content="User succesfully created"
+        content="User successfully created"
     )
+
+
+# Mail API
+
+@app.post("/sendmail")
+async def api_send_mail(apikey: ApiKey, mail: Mail):
+    try:
+        if apikey.PERMISSION >= 2:
+            if mail.send():
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content="E-Mail was sent successfully"
+                )
+            else:
+                return HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal Server Error with Processing the Mail"
+                )
+        else:
+            return HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not allowed to send Mails"
+            )
+    except ValidationError as e:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content=e.errors()
+        )
+

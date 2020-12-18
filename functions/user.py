@@ -11,10 +11,10 @@ def get_user(ID=None, EMAIL=None):
 
     if ID is not None:
         cursor.execute("SELECT * FROM USERDATA WHERE ID = %s", (ID,))
-        return fetch_data(cursor.fetchall()[0])
+        return fetch_data(cursor.get_row())
     if EMAIL is not None:
         cursor.execute("SELECT * FROM USERDATA WHERE EMAIL = %s", (EMAIL,))
-        return fetch_data(cursor.fetchall()[0])
+        return fetch_data(cursor.get_row())
     else:
         raise ValueError('USER not Valid')
 
@@ -35,6 +35,7 @@ def push_data(u: User):
     ACTIVE = %s
     WHERE ID = %s
     """
+
     PARAM = (
         u.EMAIL,
         u.PASSWORD_HASH,
