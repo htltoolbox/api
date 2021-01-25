@@ -1,7 +1,7 @@
 import importlib
 import mysql.connector
-import env as e
-
+try:
+    import env as e
 found_env = importlib.util.find_spec("env")
 
 if found_env is not None:
