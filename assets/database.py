@@ -5,7 +5,7 @@ import env as e
 foung_env = importlib.util.find_spec("env")
 
 if env is not None:
-    import dummby_env as e
+    import dummy_env as e
 
 
 # env (enviorment) is the env.py file where all of the
