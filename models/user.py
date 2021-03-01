@@ -22,6 +22,7 @@ class User(BaseModel):
     PERMISSION_LEVEL: Optional[int] = None
     LAST_IP: Optional[str] = None
     ACTIVE: Optional[bool] = None
+    TEMPHASH: Optional[str] = None
 
     @validator('ID')
     def is_positiv(cls, values):

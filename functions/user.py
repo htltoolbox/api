@@ -5,6 +5,7 @@ from assets.database import datasource
 from models.sessionkey import SessionKey
 from models.user import User
 
+from typing import Optional
 
 
 def get_user(ID: Optional[str] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
@@ -37,7 +38,8 @@ def push_data(u: User):
     CLASS = %s,
     PERMISSION_LEVEL = %s,
     LAST_IP = %s,
-    ACTIVE = %s
+    ACTIVE = %s,
+    TEMPHASH = %s
     WHERE ID = %s
     """
 
@@ -64,8 +66,8 @@ def create_user(u: User):
     ds.connect()
 
     SQL = """
-    INSERT INTO USERDATA (EMAIL, PASSWORD_HASH, NAME, LASTNAME, CLASS, PERMISSION_LEVEL, LAST_IP, ACTIVE) 
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO USERDATA (EMAIL, PASSWORD_HASH, NAME, LASTNAME, CLASS, PERMISSION_LEVEL, LAST_IP, ACTIVE, TEMPHASH) 
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     PARAM = (
         u.EMAIL,
@@ -75,7 +77,8 @@ def create_user(u: User):
         u.CLASS,
         u.PERMISSION_LEVEL,
         str(u.LAST_IP),
-        u.ACTIVE
+        u.ACTIVE,
+        u.TEMPHASH
     )
 
     ds.execute(SQL, PARAM)
