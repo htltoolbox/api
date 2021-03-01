@@ -1,27 +1,32 @@
 from fastapi import Depends
 
 from assets.database import openDBConnection
+from assets.database import datasource
 from models.sessionkey import SessionKey
 from models.user import User
 
 
-def get_user(ID=None, EMAIL=None):
-    db = openDBConnection()
-    cursor = db.cursor()
+
+def get_user(ID: Optional[str] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
+    ds = datasource()
+    ds.connect()
 
     if ID is not None:
-        cursor.execute("SELECT * FROM USERDATA WHERE ID = %s", (ID,))
-        return fetch_data(cursor.get_row())
-    if EMAIL is not None:
-        cursor.execute("SELECT * FROM USERDATA WHERE EMAIL = %s", (EMAIL,))
-        return fetch_data(cursor.get_row())
+        ds.execute("SELECT * FROM USERDATA WHERE ID = %s", (ID,))
+        return fetch_data(ds.fetch_row())
+    elif EMAIL is not None:
+        ds.execute("SELECT * FROM USERDATA WHERE EMAIL = %s", (EMAIL,))
+        return fetch_data(ds.fetch_row())
+    elif TEMPHASH is not None:
+        ds.execute("SELECT * FROM USERDATA WHERE TEMPHASH = %s", (TEMPHASH,))
+        return fetch_data(ds.fetch_row())
     else:
         raise ValueError('USER not Valid')
 
 
 def push_data(u: User):
-    db = openDBConnection()
-    cursor = db.cursor()
+    ds = datasource()
+    ds.connect()
 
     SQL = """
     UPDATE USERDATA SET 
@@ -45,18 +50,18 @@ def push_data(u: User):
         u.PERMISSION_LEVEL,
         str(u.LAST_IP),
         u.ACTIVE,
+        u.TEMPHASH,
         u.ID
     )
 
-    cursor.execute(SQL, PARAM)
-    db.commit()
-    cursor.close()
-    db.close()
+    ds.execute(SQL, PARAM)
+    ds.commit()
+    ds.close()
 
 
 def create_user(u: User):
-    db = openDBConnection()
-    cursor = db.cursor()
+    ds = datasource()
+    ds.connect()
 
     SQL = """
     INSERT INTO USERDATA (EMAIL, PASSWORD_HASH, NAME, LASTNAME, CLASS, PERMISSION_LEVEL, LAST_IP, ACTIVE) 
@@ -73,10 +78,9 @@ def create_user(u: User):
         u.ACTIVE
     )
 
-    cursor.execute(SQL, PARAM)
-    db.commit()
-    cursor.close()
-    db.close()
+    ds.execute(SQL, PARAM)
+    ds.commit()
+    ds.close()
 
 
 def fetch_data(data):
@@ -90,16 +94,17 @@ def fetch_data(data):
         PERMISSION_LEVEL=data[6],
         LAST_IP=data[7],
         ACTIVE=data[8],
+        TEMPHASH=data[9],
     )
 
 
 def is_teacher(EMAIL: str):
-    db = openDBConnection()
-    cursor = db.cursor()
+    ds = datasource()
+    ds.connect()
 
-    cursor.execute("SELECT EMAIL FROM GLOBAL_TEACHERS WHERE EMAIL = %s", (EMAIL,))
+    ds.execute("SELECT EMAIL FROM GLOBAL_TEACHERS WHERE EMAIL = %s", (EMAIL,))
 
-    data: str = cursor.fetchone()
+    data: str = ds.fetch_row()
 
     if data is not None:
         if data[0].casefold() == EMAIL.casefold():
@@ -109,14 +114,14 @@ def is_teacher(EMAIL: str):
 
 
 def get_all_users():
-    db = openDBConnection()
-    cursor = db.cursor()
+    ds = datasource()
+    ds.connect()
 
-    cursor.execute("SELECT * FROM USERDATA")
+    ds.execute("SELECT * FROM USERDATA")
 
     allUsers = dict()
 
-    data = cursor.fetchall()
+    data = ds.fetch_all()
 
     for x in data:
         allUsers[x[0]] = fetch_data(x)

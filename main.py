@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
+from assets.database import datasource
 
 from assets.database import openDBConnection
 from functions.hashing import get_current_active_user, authenticate_user, get_password_hash
@@ -120,16 +121,18 @@ async def form_create_user(api_key: str, user: preUser):
             content=e.errors()
         )
 
-    db = openDBConnection()
-    cursor = db.cursor()
+    ds = datasource()
+    ds.connect()
 
     SQL = "SELECT EMAIL FROM USERDATA WHERE EMAIL = %s"
     PAR = (user.EMAIL,)
 
-    cursor.execute(SQL, PAR)
-    data = cursor.fetchone()
+    ds.execute(SQL, PAR)
+    data = ds.fetch_row()
 
-    if data is None:
+    ds.close()
+
+    if data is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already registered"
