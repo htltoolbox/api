@@ -3,6 +3,7 @@ from typing import Optional
 import json
 import uuid
 
+import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
@@ -62,8 +63,15 @@ async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm 
     )
 
 
-@app.post("/flow/oauth2/authapp/{temphash}")
-async def flow_oauth2_authapp(temphash: str):
+@app.post("/flow/oauth2/authapp/{temphash}", response_model=Token)
+async def flow_oauth2_authapp(temphash: str, apikey: str):
+    try:
+        getApp(API_KEY=apikey)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="API_KEY was rejected. Please Provide a Valid one."
+        )
     account = get_user(TEMPHASH=temphash)
     if not account:
         raise HTTPException(
@@ -77,6 +85,7 @@ async def flow_oauth2_authapp(temphash: str):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 # Mail API POST
 
 @app.post("/sendmail")
@@ -84,7 +93,7 @@ async def api_send_mail(apikey: str, mail: Mail):
     apikey = ApiKey(APIKEY=apikey)
     try:
         if apikey.PERMISSION >= 2:
-            if mail.send():
+            if await mail.send():
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
                     content="E-Mail was sent successfully"
@@ -127,7 +136,7 @@ async def read_user_by_id(id: int, current_user: User = Depends(get_current_acti
 async def return_all_users(current_user: User = Depends(get_current_active_user)):
     if current_user.PERMISSION_LEVEL >= 3:
         try:
-            return get_all_users()
+            return await get_all_users()
         except ValidationError as e:
             return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=e.errors())
     else:
@@ -217,3 +226,6 @@ async def form_create_user(api_key: str, user: preUser):
         status_code=status.HTTP_200_OK,
         content="User successfully created"
     )
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
