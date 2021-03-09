@@ -27,8 +27,8 @@ app = FastAPI(title="HTL-TOOLBOX-API", version="0.0.3-Alpha-1")
 
 
 @app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    account = authenticate_user(form_data.username, form_data.password)
+async def login_for_access_token(ip: str, form_data: OAuth2PasswordRequestForm = Depends()):
+    account = authenticate_user(form_data.username, form_data.password, ip)
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,7 +66,7 @@ async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm 
 @app.post("/flow/oauth2/authapp/{temphash}", response_model=Token)
 async def flow_oauth2_authapp(temphash: str, apikey: str):
     try:
-        getApp(API_KEY=apikey)
+        await getApp(API_KEY=apikey)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
@@ -124,9 +124,9 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 
 @app.get("/users/{id}", response_model=User)
-async def read_user_by_id(id: int, current_user: User = Depends(get_current_active_user)):
+async def read_user_by_id(user_id: int, current_user: User = Depends(get_current_active_user)):
     if current_user.PERMISSION_LEVEL >= 3:
-        return get_user(ID=id)
+        return await get_user(ID=user_id)
     else:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
                             content="Not sufficient Permissions to view other users")

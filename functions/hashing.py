@@ -6,7 +6,7 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 
 from functions import user as u
 import env as e
-from functions.user import get_user
+from functions.user import get_user, push_data
 from models.tokendata import TokenData
 from models.user import User
 
@@ -25,12 +25,14 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_user(EMAIL: str, PASSWORD: str):
+def authenticate_user(EMAIL: str, PASSWORD: str, IP: str):
     account = u.get_user(EMAIL=EMAIL)
     if not account:
         return False
     if not verify_password(PASSWORD, account.PASSWORD_HASH):
         return False
+    account.LAST_IP = IP
+    push_data(account)
     return account
 
 

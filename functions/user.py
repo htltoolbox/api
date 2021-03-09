@@ -10,7 +10,7 @@ from typing import Optional
 import env as e
 
 
-def get_user(ID: Optional[str] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
+def get_user(ID: Optional[int] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
     ds = datasource()
     ds.connect()
 
