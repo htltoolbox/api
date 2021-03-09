@@ -1,8 +1,8 @@
-pydantic~=1.6.1
-fastapi~=0.61.1
+pydantic==1.8
+fastapi==0.63.0
 mysql-connector-python~=8.0.21
 passlib~=1.7.2
 bcrypt~=3.2.0
-uvicorn~=0.12.2
+uvicorn==0.13.4
 python-jose~=3.2.0
 python-multipart~=0.0.5
