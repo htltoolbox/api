@@ -1,13 +1,8 @@
-from fastapi import Depends
-
-from assets.database import openDBConnection
-from assets.database import datasource
-from models.sessionkey import SessionKey
-from models.user import User
-
 from typing import Optional
 
 import env as e
+from assets.database import datasource
+from models.user import User
 
 
 def get_user(ID: Optional[int] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):

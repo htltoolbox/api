@@ -1,6 +1,6 @@
-from models import user
-from assets.database import datasource
 from typing import Optional
+
+from assets.database import datasource
 from models.app import App
 
 ds = datasource()
@@ -21,4 +21,3 @@ def getApp(ID: Optional[int] = None, NAME: Optional[str] = None, API_KEY: Option
     ds.execute(SQL, PARAM)
     data = ds.fetch_dict()
     return App(**data)
-

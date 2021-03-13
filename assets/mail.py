@@ -7,6 +7,8 @@ from email.mime.text import MIMEText
 def sendMail(to: str, subject: str, message: str, html: bool = False):
     import env as e
 
+    # Create a SSL Context
+
     context = ssl.create_default_context()
 
     mail = MIMEMultipart("alternative")

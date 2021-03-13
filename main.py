@@ -1,40 +1,59 @@
-from datetime import timedelta
-from typing import Optional
-import json
+#
+# HTL-Toolbox /main.py
+#
+# This file contains most of the API-Performable functions
+
+# Import External Dependencies
+
+# Import Standard Libs
+
 import uuid
+from datetime import timedelta
+
+# Import Dependencies
 
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
-from assets.database import datasource
 
-from assets.database import openDBConnection
+# Import Local Functions and Models
+
+from assets.database import datasource
 from functions.app import getApp
 from functions.hashing import get_current_active_user, authenticate_user, get_password_hash
 from functions.sessionkey import create_access_token
 from functions.user import create_user, get_user, is_teacher, get_all_users, remove_passwordhash_obj, push_data
-from models.token import Token
-from models.user import User, preUser
 from models.apikey import ApiKey
 from models.mail import Mail
+from models.token import Token
+from models.user import User, preUser
+
+# Initialize FastAPI
 
 app = FastAPI(title="HTL-TOOLBOX-API", version="0.0.3-Alpha-1")
 
 
 # Post
 
-
 @app.post("/token", response_model=Token)
 async def login_for_access_token(ip: str, form_data: OAuth2PasswordRequestForm = Depends()):
+    # Call Authenticate User Function from the Formdata
+
     account = authenticate_user(form_data.username, form_data.password, ip)
+
+    # Check account otherwise return 401
+
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Create Access-Token ans set valid-timespan to 4-weeks
+
     access_token_expires = timedelta(weeks=4)
     access_token = create_access_token(
         data={"sub": account.EMAIL}, expires_delta=access_token_expires
@@ -90,10 +109,17 @@ async def flow_oauth2_authapp(temphash: str, apikey: str):
 
 @app.post("/sendmail")
 async def api_send_mail(apikey: str, mail: Mail):
+    # This creation of the API-Key object will throw an error if the key is not valid
+
     apikey = ApiKey(APIKEY=apikey)
+
+    # Try catch block to avoid the posibily of the object not beeing created
+
     try:
+
         if apikey.PERMISSION >= 2:
-            if await mail.send():
+
+            if mail.send():
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
                     content="E-Mail was sent successfully"
@@ -108,6 +134,9 @@ async def api_send_mail(apikey: str, mail: Mail):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not allowed to send Mails"
             )
+
+    # Catch ValidationError if apikey is not valid
+
     except ValidationError as e:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -115,7 +144,7 @@ async def api_send_mail(apikey: str, mail: Mail):
         )
 
 
-# User get Operrations
+# User GET Operrations
 
 
 @app.get("/users/me", response_model=User, description="shows the current active logged in user")
@@ -146,8 +175,10 @@ async def return_all_users(current_user: User = Depends(get_current_active_user)
 
 # Put
 
-@app.put("/admin/create/user")
+@app.put("/admin/create/user", description="Operation for Admins to manually create a user through the API")
 async def admin_create_user(user: User, current_user: User = Depends(get_current_active_user)):
+    # Check if the logged-in-User hat Admin Priveleges
+
     if current_user.PERMISSION_LEVEL >= 3:
         user.PASSWORD_HASH = get_password_hash(user.PASSWORD_HASH)
         create_user(user)
@@ -226,6 +257,7 @@ async def form_create_user(api_key: str, user: preUser):
         status_code=status.HTTP_200_OK,
         content="User successfully created"
     )
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

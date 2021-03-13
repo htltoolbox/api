@@ -1,11 +1,11 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from functions import user as u
 import env as e
+from functions import user as u
 from functions.user import get_user, push_data
 from models.tokendata import TokenData
 from models.user import User

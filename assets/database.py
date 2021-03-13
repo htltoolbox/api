@@ -1,8 +1,8 @@
-import importlib
+from typing import Optional
+
 import mysql.connector
 
 import env as e
-from typing import Optional
 
 
 # env (enviorment) is the env.py file where all of the
@@ -48,8 +48,3 @@ class datasource:
     def close(self):
         self.cursor.close()
         self.db_conn.close()
-
-
-
-
-
