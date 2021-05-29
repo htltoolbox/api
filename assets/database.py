@@ -1,8 +1,8 @@
-import importlib
+from typing import Optional
+
 import mysql.connector
 
 import env as e
-from typing import Optional
 
 
 # env (enviorment) is the env.py file where all of the
@@ -14,7 +14,9 @@ def openDBConnection():
         host=e.db_host,
         user=e.db_username,
         passwd=e.db_password,
-        database=e.db_database
+        database=e.db_database,
+        autocommit=True,
+        connect_timeout=900
     )
     return db
 
@@ -48,8 +50,3 @@ class datasource:
     def close(self):
         self.cursor.close()
         self.db_conn.close()
-
-
-
-
-

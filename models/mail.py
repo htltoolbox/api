@@ -1,7 +1,9 @@
-from pydantic import BaseModel, validator
-from typing import Optional
-from assets.mail import sendMail
 import re
+from typing import Optional
+
+from pydantic import BaseModel, validator
+
+from assets.mail import sendMail
 
 
 class Mail(BaseModel):

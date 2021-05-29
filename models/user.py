@@ -1,9 +1,7 @@
-from ipaddress import IPv4Address
-from typing import Optional
-from pydantic import BaseModel, validator, IPvAnyAddress
-from assets.database import openDBConnection
 import re
-from models.sessionkey import SessionKey
+from typing import Optional
+
+from pydantic import BaseModel, validator
 
 
 class preUser(BaseModel):
@@ -45,3 +43,11 @@ class User(BaseModel):
             return values
         else:
             raise ValueError('CLASS in not Valid')
+
+    @validator('LAST_IP')
+    def is_valid_ip(cls, values):
+        regex = r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
+        if re.search(regex, values):
+            return values
+        else:
+            raise ValueError('IP in not Valid')

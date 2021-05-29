@@ -1,39 +1,76 @@
-from datetime import timedelta
-from typing import Optional
-import json
-import uuid
+#
+# HTL-Toolbox /main.py
+#
+# This file contains most of the API-Performable functions
 
+# Import External Dependencies
+
+# Import Standard Libs
+
+import uuid
+from datetime import timedelta
+
+# Import Dependencies
+
+import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
-from starlette.responses import JSONResponse
-from assets.database import datasource
+from starlette.responses import JSONResponse, RedirectResponse
 
-from assets.database import openDBConnection
+# Import Local Functions and Models
+
+from assets.database import datasource
+from assets.filter import htmlspecialchars
 from functions.app import getApp
+from functions.clickboard import get_all_clickboards, create_clickboard
 from functions.hashing import get_current_active_user, authenticate_user, get_password_hash
 from functions.sessionkey import create_access_token
 from functions.user import create_user, get_user, is_teacher, get_all_users, remove_passwordhash_obj, push_data
+from models.apikey import ApiKey
+from models.clickboard import Clickboard, TempClickboard
+from models.mail import Mail
 from models.token import Token
 from models.user import User, preUser
-from models.apikey import ApiKey
-from models.mail import Mail
+
+# Initialize FastAPI
 
 app = FastAPI(title="HTL-TOOLBOX-API", version="0.0.3-Alpha-1")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+)
+
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
 
 
 # Post
 
-
 @app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    account = authenticate_user(form_data.username, form_data.password)
+async def login_for_access_token(ip: str, form_data: OAuth2PasswordRequestForm = Depends()):
+    # Call Authenticate User Function from the Formdata
+
+    account = authenticate_user(form_data.username, form_data.password, ip)
+
+    # Check account otherwise return 401
+
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Create Access-Token ans set valid-timespan to 4-weeks
+
     access_token_expires = timedelta(weeks=4)
     access_token = create_access_token(
         data={"sub": account.EMAIL}, expires_delta=access_token_expires
@@ -42,8 +79,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 
 @app.post("/flow/oauth2/temphash/{appid}")
-async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm = Depends()):
-    account = authenticate_user(form_data.username, form_data.password)
+async def flow_oauth2_temphash(appid: int, ip: str, form_data: OAuth2PasswordRequestForm = Depends()):
+    account = authenticate_user(form_data.username, form_data.password, IP=ip)
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,9 +99,22 @@ async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm 
     )
 
 
-@app.post("/flow/oauth2/authapp/{temphash}")
-async def flow_oauth2_authapp(temphash: str):
-    account = get_user(TEMPHASH=temphash)
+@app.post("/flow/oauth2/authapp/{temphash}", response_model=Token)
+async def flow_oauth2_authapp(temphash: str, apikey: str):
+    try:
+        getApp(API_KEY=apikey)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="API_KEY was rejected. Please Provide a Valid one."
+        )
+    try:
+        account = get_user(TEMPHASH=temphash)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.__str__()
+        )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,15 +125,42 @@ async def flow_oauth2_authapp(temphash: str):
     access_token = create_access_token(
         data={"sub": account.EMAIL}, expires_delta=access_token_expires
     )
+    account.TEMPHASH = None
+    push_data(account)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/account/activate/{hash}")
+async def activate_account(hash: str):
+    checkedhash = htmlspecialchars(hash)
+
+    ds = datasource()
+    ds.connect()
+
+    SQL = "UPDATE USERDATA SET ACTIVE = 1, TEMPHASH = NULL WHERE TEMPHASH = %s"
+    PARAM = (checkedhash,)
+
+    ds.execute(SQL, PARAM)
+    ds.commit()
+    ds.close()
+
+    return RedirectResponse(url='https://toolbox.philsoft.at')
+
 
 # Mail API POST
 
 @app.post("/sendmail")
 async def api_send_mail(apikey: str, mail: Mail):
+    # This creation of the API-Key object will throw an error if the key is not valid
+
     apikey = ApiKey(APIKEY=apikey)
+
+    # Try catch block to avoid the posibily of the object not beeing created
+
     try:
+
         if apikey.PERMISSION >= 2:
+
             if mail.send():
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
@@ -99,6 +176,9 @@ async def api_send_mail(apikey: str, mail: Mail):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not allowed to send Mails"
             )
+
+    # Catch ValidationError if apikey is not valid
+
     except ValidationError as e:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -106,7 +186,7 @@ async def api_send_mail(apikey: str, mail: Mail):
         )
 
 
-# User get Operrations
+# User GET Operrations
 
 
 @app.get("/users/me", response_model=User, description="shows the current active logged in user")
@@ -117,7 +197,11 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 @app.get("/users/{id}", response_model=User)
 async def read_user_by_id(id: int, current_user: User = Depends(get_current_active_user)):
     if current_user.PERMISSION_LEVEL >= 3:
-        return get_user(ID=id)
+        try:
+            return get_user(ID=id)
+        except ValueError as e:
+            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
+                                content=e.__str__())
     else:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
                             content="Not sufficient Permissions to view other users")
@@ -127,7 +211,7 @@ async def read_user_by_id(id: int, current_user: User = Depends(get_current_acti
 async def return_all_users(current_user: User = Depends(get_current_active_user)):
     if current_user.PERMISSION_LEVEL >= 3:
         try:
-            return get_all_users()
+            return await get_all_users()
         except ValidationError as e:
             return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=e.errors())
     else:
@@ -137,8 +221,10 @@ async def return_all_users(current_user: User = Depends(get_current_active_user)
 
 # Put
 
-@app.put("/admin/create/user")
+@app.put("/admin/create/user", description="Operation for Admins to manually create a user through the API")
 async def admin_create_user(user: User, current_user: User = Depends(get_current_active_user)):
+    # Check if the logged-in-User hat Admin Priveleges
+
     if current_user.PERMISSION_LEVEL >= 3:
         user.PASSWORD_HASH = get_password_hash(user.PASSWORD_HASH)
         create_user(user)
@@ -151,7 +237,7 @@ async def admin_create_user(user: User, current_user: User = Depends(get_current
 
 
 @app.put("/create/user")
-async def form_create_user(api_key: str, user: preUser):
+async def form_create_user(api_key: str, user: preUser, ip: str):
     try:
         ApiKey(APIKEY=api_key)
     except ValidationError as e:
@@ -178,6 +264,7 @@ async def form_create_user(api_key: str, user: preUser):
         )
 
     PERMISSION_LEVEL = 0
+    HASH = uuid.uuid1().hex
 
     isTeacher = is_teacher(user.EMAIL)
 
@@ -205,7 +292,9 @@ async def form_create_user(api_key: str, user: preUser):
             LASTNAME=LASTNAME,
             CLASS=user.CLASS,
             PERMISSION_LEVEL=PERMISSION_LEVEL,
-            ACTIVE=False
+            LAST_IP=ip,
+            ACTIVE=False,
+            TEMPHASH=HASH
         )
     except ValidationError as e:
         raise HTTPException(
@@ -213,7 +302,45 @@ async def form_create_user(api_key: str, user: preUser):
             detail=e.errors()
         )
     create_user(account)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content="User successfully created"
+
+    mail = Mail(
+        to=user.EMAIL,
+        subject="Account Aktivieren",
+        message="https://api.toolbox.philsoft.at/account/activate/" + account.TEMPHASH,
+        html=False
     )
+
+    if mail.send():
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content="User successfully created"
+        )
+    else:
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="There was some error with the mail processing"
+        )
+
+    # Clickboards
+
+
+@app.get("/v1/apps/clickboards", response_model_include=Clickboard)
+async def all_clickboards():
+    return get_all_clickboards()
+
+
+@app.put("/v1/apps/clickboards/create")
+async def api_create_clickboard(click: TempClickboard, current_user: User = Depends(get_current_active_user)):
+    if current_user.PERMISSION_LEVEL >= 1:
+        create_clickboard(click)
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content="Clickboard created"
+        )
+    else:
+        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
+                            content="Not sufficient Permissions to view other users")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

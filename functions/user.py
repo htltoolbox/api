@@ -1,28 +1,34 @@
-from fastapi import Depends
-
-from assets.database import openDBConnection
-from assets.database import datasource
-from models.sessionkey import SessionKey
-from models.user import User
-
 from typing import Optional
 
+import env as e
+from assets.database import datasource
+from models.user import User
 
-def get_user(ID: Optional[str] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
+
+def get_user(ID: Optional[int] = None, EMAIL: Optional[str] = None, TEMPHASH: Optional[str] = None):
     ds = datasource()
     ds.connect()
 
     if ID is not None:
+        if e.DEBUG:
+            print(ID)
         ds.execute("SELECT * FROM USERDATA WHERE ID = %s", (ID,))
-        return fetch_data(ds.fetch_row())
     elif EMAIL is not None:
+        if e.DEBUG:
+            print(EMAIL)
         ds.execute("SELECT * FROM USERDATA WHERE EMAIL = %s", (EMAIL,))
-        return fetch_data(ds.fetch_row())
     elif TEMPHASH is not None:
+        if e.DEBUG:
+            print(TEMPHASH)
         ds.execute("SELECT * FROM USERDATA WHERE TEMPHASH = %s", (TEMPHASH,))
-        return fetch_data(ds.fetch_row())
     else:
         raise ValueError('USER not Valid')
+    data = ds.fetch_row()
+    ds.close()
+    if data is not None:
+        return fetch_data(data)
+    else:
+        raise ValueError('No user found')
 
 
 def push_data(u: User):
@@ -108,6 +114,7 @@ def is_teacher(EMAIL: str):
     ds.execute("SELECT EMAIL FROM GLOBAL_TEACHERS WHERE EMAIL = %s", (EMAIL,))
 
     data: str = ds.fetch_row()
+    ds.close()
 
     if data is not None:
         if data[0].casefold() == EMAIL.casefold():
@@ -125,6 +132,7 @@ def get_all_users():
     allUsers = dict()
 
     data = ds.fetch_all()
+    ds.close()
 
     for x in data:
         allUsers[x[0]] = fetch_data(x)
