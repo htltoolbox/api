@@ -46,7 +46,7 @@ class User(BaseModel):
 
     @validator('LAST_IP')
     def is_valid_ip(cls, values):
-        regex = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+        regex = r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
         if re.search(regex, values):
             return values
         else:
