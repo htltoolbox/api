@@ -79,8 +79,8 @@ async def login_for_access_token(ip: str, form_data: OAuth2PasswordRequestForm =
 
 
 @app.post("/flow/oauth2/temphash/{appid}")
-async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm = Depends()):
-    account = authenticate_user(form_data.username, form_data.password)
+async def flow_oauth2_temphash(appid: int, ip: str, form_data: OAuth2PasswordRequestForm = Depends()):
+    account = authenticate_user(form_data.username, form_data.password, IP=ip)
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -102,13 +102,19 @@ async def flow_oauth2_temphash(appid: int, form_data: OAuth2PasswordRequestForm 
 @app.post("/flow/oauth2/authapp/{temphash}", response_model=Token)
 async def flow_oauth2_authapp(temphash: str, apikey: str):
     try:
-        await getApp(API_KEY=apikey)
+        getApp(API_KEY=apikey)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail="API_KEY was rejected. Please Provide a Valid one."
         )
-    account = get_user(TEMPHASH=temphash)
+    try:
+        account = get_user(TEMPHASH=temphash)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.__str__()
+        )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -119,7 +125,26 @@ async def flow_oauth2_authapp(temphash: str, apikey: str):
     access_token = create_access_token(
         data={"sub": account.EMAIL}, expires_delta=access_token_expires
     )
+    account.TEMPHASH = None
+    push_data(account)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/account/activate/{hash}")
+async def activate_account(hash: str):
+    checkedhash = htmlspecialchars(hash)
+
+    ds = datasource()
+    ds.connect()
+
+    SQL = "UPDATE USERDATA SET ACTIVE = 1, TEMPHASH = NULL WHERE TEMPHASH = %s"
+    PARAM = (checkedhash,)
+
+    ds.execute(SQL, PARAM)
+    ds.commit()
+    ds.close()
+
+    return RedirectResponse(url='https://toolbox.philsoft.at')
 
 
 # Mail API POST
@@ -170,9 +195,13 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 
 @app.get("/users/{id}", response_model=User)
-async def read_user_by_id(user_id: int, current_user: User = Depends(get_current_active_user)):
+async def read_user_by_id(id: int, current_user: User = Depends(get_current_active_user)):
     if current_user.PERMISSION_LEVEL >= 3:
-        return await get_user(ID=user_id)
+        try:
+            return get_user(ID=id)
+        except ValueError as e:
+            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
+                                content=e.__str__())
     else:
         return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
                             content="Not sufficient Permissions to view other users")
@@ -208,7 +237,7 @@ async def admin_create_user(user: User, current_user: User = Depends(get_current
 
 
 @app.put("/create/user")
-async def form_create_user(api_key: str, user: preUser):
+async def form_create_user(api_key: str, user: preUser, ip: str):
     try:
         ApiKey(APIKEY=api_key)
     except ValidationError as e:
@@ -235,6 +264,7 @@ async def form_create_user(api_key: str, user: preUser):
         )
 
     PERMISSION_LEVEL = 0
+    HASH = uuid.uuid1().hex
 
     isTeacher = is_teacher(user.EMAIL)
 
@@ -262,7 +292,9 @@ async def form_create_user(api_key: str, user: preUser):
             LASTNAME=LASTNAME,
             CLASS=user.CLASS,
             PERMISSION_LEVEL=PERMISSION_LEVEL,
-            ACTIVE=False
+            LAST_IP=ip,
+            ACTIVE=False,
+            TEMPHASH=HASH
         )
     except ValidationError as e:
         raise HTTPException(
@@ -311,4 +343,4 @@ async def api_create_clickboard(click: TempClickboard, current_user: User = Depe
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
