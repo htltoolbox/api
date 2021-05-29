@@ -14,7 +14,9 @@ def openDBConnection():
         host=e.db_host,
         user=e.db_username,
         passwd=e.db_password,
-        database=e.db_database
+        database=e.db_database,
+        autocommit=True,
+        connect_timeout=900
     )
     return db
 
