@@ -15,6 +15,7 @@ from datetime import timedelta
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
@@ -36,6 +37,19 @@ from models.user import User, preUser
 # Initialize FastAPI
 
 app = FastAPI(title="HTL-TOOLBOX-API", version="0.0.3-Alpha-1")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+)
+
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
 
 
 # Post
