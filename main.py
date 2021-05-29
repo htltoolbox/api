@@ -253,10 +253,44 @@ async def form_create_user(api_key: str, user: preUser):
             detail=e.errors()
         )
     create_user(account)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content="User successfully created"
+
+    mail = Mail(
+        to=user.EMAIL,
+        subject="Account Aktivieren",
+        message="https://api.toolbox.philsoft.at/account/activate/" + account.TEMPHASH,
+        html=False
     )
+
+    if mail.send():
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content="User successfully created"
+        )
+    else:
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="There was some error with the mail processing"
+        )
+
+    # Clickboards
+
+
+@app.get("/v1/apps/clickboards", response_model_include=Clickboard)
+async def all_clickboards():
+    return get_all_clickboards()
+
+
+@app.put("/v1/apps/clickboards/create")
+async def api_create_clickboard(click: TempClickboard, current_user: User = Depends(get_current_active_user)):
+    if current_user.PERMISSION_LEVEL >= 1:
+        create_clickboard(click)
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content="Clickboard created"
+        )
+    else:
+        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN,
+                            content="Not sufficient Permissions to view other users")
 
 
 if __name__ == "__main__":
