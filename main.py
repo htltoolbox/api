@@ -16,16 +16,19 @@ import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 # Import Local Functions and Models
 
 from assets.database import datasource
+from assets.filter import htmlspecialchars
 from functions.app import getApp
+from functions.clickboard import get_all_clickboards, create_clickboard
 from functions.hashing import get_current_active_user, authenticate_user, get_password_hash
 from functions.sessionkey import create_access_token
 from functions.user import create_user, get_user, is_teacher, get_all_users, remove_passwordhash_obj, push_data
 from models.apikey import ApiKey
+from models.clickboard import Clickboard, TempClickboard
 from models.mail import Mail
 from models.token import Token
 from models.user import User, preUser
